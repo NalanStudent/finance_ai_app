@@ -11,8 +11,24 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
-
   bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sendGreetingMessage(); // Send the initial greeting message on page load
+  }
+
+  // Send initial greeting message
+  Future<void> _sendGreetingMessage() async {
+    setState(() {
+      _messages.add({
+        'role': 'assistant',
+        'text':
+            'Hello! How can I assist you with your financial queries today?',
+      });
+    });
+  }
 
   Future<String> _generatePrompt(String userMessage) async {
     final prefs = await SharedPreferences.getInstance();
@@ -99,6 +115,13 @@ Now, respond to this message from the user:
     }
   }
 
+  // Clear chat history
+  void _clearChat() {
+    setState(() {
+      _messages.clear(); // Clears the chat history
+    });
+  }
+
   Widget _buildMessage(String role, String text) {
     final isUser = role == 'user';
     return Align(
@@ -118,7 +141,15 @@ Now, respond to this message from the user:
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Finance Chat")),
+      appBar: AppBar(
+        title: Text("Finance Chat"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _clearChat, // Clear chat action
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(

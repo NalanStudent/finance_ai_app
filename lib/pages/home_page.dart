@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'form_page.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -9,6 +10,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Map<String, dynamic> userData = {};
+  int savings = 0;
 
   @override
   void initState() {
@@ -18,25 +20,42 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    final hasDebt = prefs.getBool('hasDebt') ?? false;
+
+    final int income = prefs.getInt('income') ?? 0;
+    final int food = prefs.getInt('food') ?? 0;
+    final int clothes = prefs.getInt('clothes') ?? 0;
+    final int subs = prefs.getInt('subs') ?? 0;
+    final int water = prefs.getInt('water') ?? 0;
+    final int electricity = prefs.getInt('electricity') ?? 0;
+    final int rent = prefs.getInt('rent') ?? 0;
+    final int phone = prefs.getInt('phone') ?? 0;
+    final int debtMonthly = hasDebt ? prefs.getInt('debtMonthly') ?? 0 : 0;
+
+    final int totalExpenses =
+        food + clothes + subs + water + electricity + rent + phone;
+    final int calculatedSavings = income - totalExpenses - debtMonthly;
+
     setState(() {
       userData = {
         'name': prefs.getString('name') ?? '',
         'age': prefs.getInt('age') ?? 0,
-        'income': prefs.getInt('income') ?? 0,
-        'hasDebt': prefs.getBool('hasDebt') ?? false,
+        'income': income,
+        'hasDebt': hasDebt,
         'debtAmount': prefs.getInt('debtAmount') ?? 0,
         'debtInterest': prefs.getInt('debtInterest') ?? 0,
         'debtMonthly': prefs.getInt('debtMonthly') ?? 0,
-        'food': prefs.getInt('food') ?? 0,
-        'clothes': prefs.getInt('clothes') ?? 0,
-        'subs': prefs.getInt('subs') ?? 0,
+        'food': food,
+        'clothes': clothes,
+        'subs': subs,
         'otherExpense': prefs.getString('otherExpense') ?? '',
-        'water': prefs.getInt('water') ?? 0,
-        'electricity': prefs.getInt('electricity') ?? 0,
-        'rent': prefs.getInt('rent') ?? 0,
-        'phone': prefs.getInt('phone') ?? 0,
+        'water': water,
+        'electricity': electricity,
+        'rent': rent,
+        'phone': phone,
         'otherBill': prefs.getString('otherBill') ?? '',
       };
+      savings = calculatedSavings;
     });
   }
 
@@ -77,6 +96,93 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildSavingsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Card(
+        color: savings >= 0 ? Colors.green.shade100 : Colors.red.shade100,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "💰 Estimated Monthly Savings",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "\$${savings >= 0 ? savings : 0}",
+                style: TextStyle(
+                  fontSize: 24,
+                  color:
+                      savings >= 0
+                          ? Colors.green.shade800
+                          : Colors.red.shade800,
+                ),
+              ),
+              if (savings < 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    "You're spending more than you earn!",
+                    style: TextStyle(color: Colors.red.shade700),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<PieChartSectionData> _getPieSections(Map<String, dynamic> data) {
+    final income = data['income'] ?? 0;
+    final expenses =
+        (data['food'] ?? 0) + (data['clothes'] ?? 0) + (data['subs'] ?? 0);
+    final bills =
+        (data['water'] ?? 0) +
+        (data['electricity'] ?? 0) +
+        (data['rent'] ?? 0) +
+        (data['phone'] ?? 0);
+    final debt = data['hasDebt'] ? (data['debtMonthly'] ?? 0) : 0;
+    final totalSpent = expenses + bills + debt;
+    final remaining = (income - totalSpent).clamp(0, income);
+
+    return [
+      PieChartSectionData(
+        color: Colors.blue,
+        value: expenses.toDouble(),
+        title: 'Expenses',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+      PieChartSectionData(
+        color: Colors.red,
+        value: bills.toDouble(),
+        title: 'Bills',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+      PieChartSectionData(
+        color: Colors.orange,
+        value: debt.toDouble(),
+        title: 'Debt',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+      PieChartSectionData(
+        color: Colors.green,
+        value: remaining.toDouble(),
+        title: 'Savings',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,7 +196,7 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(builder: (_) => FormPage()),
               );
-              _loadUserData(); // Refresh data when returning
+              _loadUserData();
             },
           ),
         ],
@@ -102,6 +208,25 @@ class _HomePageState extends State<HomePage> {
                 ? Center(child: CircularProgressIndicator())
                 : Column(
                   children: [
+                    Text(
+                      "Budget Breakdown",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    AspectRatio(
+                      aspectRatio: 1.3,
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          sections: _getPieSections(userData),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
                     _buildSection("Personal Information", [
                       _infoRow("Name", userData['name']),
                       _infoRow("Age", userData['age']),
@@ -134,6 +259,7 @@ class _HomePageState extends State<HomePage> {
                       _infoRow("Phone", "\$${userData['phone']}"),
                       _infoRow("Other", userData['otherBill']),
                     ]),
+                    _buildSavingsSection(),
                   ],
                 ),
       ),

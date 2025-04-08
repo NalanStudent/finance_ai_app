@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class SummaryPage extends StatefulWidget {
   @override
@@ -16,7 +18,6 @@ class _SummaryPageState extends State<SummaryPage> {
     setState(() => isLoading = true);
     final prefs = await SharedPreferences.getInstance();
 
-    // Fetch all data
     final userData = {
       'Name': prefs.getString('name') ?? '',
       'Age': prefs.getInt('age') ?? 0,
@@ -36,7 +37,6 @@ class _SummaryPageState extends State<SummaryPage> {
       'Other Bills': prefs.getString('otherBill') ?? '',
     };
 
-    // Prompt to send to Gemini
     final prompt = """
 You are a professional financial advisor. Based on the following financial data, provide a clear and simple summary with the following sections:
 
@@ -50,28 +50,25 @@ Ensure that the response is concise, clear, and easy to understand for a user wi
 Data:
 ${jsonEncode(userData)}
 
-
-Follow the structuter below only for output:
+Follow the structure below only for output without additional starting or ending text:
 
 Name: [Name]
 Age: [Age]
-Date: [Date]
+Date: [DATE MONTH YEAR] (Please use the current date from internet)
 
 Financial Health Summary:
-[Summary]
+[Summary in small brief paragraph]
 
 Expense Reduction:
-[Reduction]
+[Reduction in small brief paragraph]
 
 Dept Advice:
-[Advice]
+[Advice in small brief paragraph]
 
 Money Management Tip:
-[Tip]
-
+[Tip in small brief paragraph]
 """;
 
-    // Gemini API
     final url = Uri.parse(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBIXOs9PJQlPzXP4EFmbWvNPMswzn3mHM4",
     );
@@ -92,8 +89,6 @@ Money Management Tip:
       final decoded = json.decode(response.body);
 
       final text = decoded['candidates'][0]['content']['parts'][0]['text'];
-
-      // Remove asterisks from the text (if any)
       String cleanText = text.replaceAll('*', '');
 
       setState(() {
@@ -106,6 +101,35 @@ Money Management Tip:
         isLoading = false;
       });
     }
+  }
+
+  Future<void> _exportSummaryAsPDF(String summaryText) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build:
+            (pw.Context context) => pw.Padding(
+              padding: pw.EdgeInsets.all(20),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    "AI Financial Summary",
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 16),
+                  pw.Text(summaryText, style: pw.TextStyle(fontSize: 14)),
+                ],
+              ),
+            ),
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
   @override
@@ -123,7 +147,35 @@ Money Management Tip:
         child:
             isLoading
                 ? Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(child: Text(summary)),
+                : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      "Your AI-Powered Financial Summary",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    SizedBox(height: 16),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text(summary, style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: Icon(Icons.picture_as_pdf),
+                      label: Text("Download as PDF"),
+                      onPressed: () {
+                        if (summary.isNotEmpty) {
+                          _exportSummaryAsPDF(summary);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("No summary to export.")),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
       ),
     );
   }
