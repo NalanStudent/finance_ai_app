@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'form_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 
 class HomePage extends StatefulWidget {
   @override
@@ -33,8 +34,34 @@ class _HomePageState extends State<HomePage> {
     final int phone = prefs.getInt('phone') ?? 0;
     final int debtMonthly = hasDebt ? prefs.getInt('debtMonthly') ?? 0 : 0;
 
+    // Load and sum tracked daily expenses for current month
+    final String expensesData = prefs.getString('extraExpenses') ?? '{}';
+    final Map<String, dynamic> allTrackedExpenses = json.decode(expensesData);
+    final now = DateTime.now();
+    int trackedMonthlyTotal = 0;
+
+    allTrackedExpenses.forEach((key, value) {
+      final dateParts = key.split('-').map(int.parse).toList(); // yyyy-mm-dd
+      if (dateParts.length == 3) {
+        final date = DateTime(dateParts[0], dateParts[1], dateParts[2]);
+        if (date.year == now.year && date.month == now.month) {
+          final List items = value;
+          for (var item in items) {
+            trackedMonthlyTotal += (item['amount'] as num?)?.toInt() ?? 0;
+          }
+        }
+      }
+    });
+
     final int totalExpenses =
-        food + clothes + subs + water + electricity + rent + phone;
+        food +
+        clothes +
+        subs +
+        water +
+        electricity +
+        rent +
+        phone +
+        trackedMonthlyTotal;
     final int calculatedSavings = income - totalExpenses - debtMonthly;
 
     setState(() {
@@ -55,6 +82,7 @@ class _HomePageState extends State<HomePage> {
         'rent': rent,
         'phone': phone,
         'otherBill': prefs.getString('otherBill') ?? '',
+        'dailyTrackedExpenses': trackedMonthlyTotal,
       };
       savings = calculatedSavings;
     });
@@ -106,7 +134,10 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Card(
-        color: savings >= 0 ? Colors.green.shade100 : Colors.red.shade100,
+        color:
+            savings >= 0
+                ? const Color.fromARGB(255, 82, 189, 157)
+                : const Color.fromARGB(255, 212, 124, 133),
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Padding(
@@ -125,8 +156,8 @@ class _HomePageState extends State<HomePage> {
                   fontSize: 24,
                   color:
                       savings >= 0
-                          ? Colors.green.shade800
-                          : Colors.red.shade800,
+                          ? const Color.fromARGB(255, 11, 40, 16)
+                          : const Color.fromARGB(255, 65, 21, 21),
                 ),
               ),
               if (savings < 0)
@@ -147,7 +178,10 @@ class _HomePageState extends State<HomePage> {
   List<PieChartSectionData> _getPieSections(Map<String, dynamic> data) {
     final income = data['income'] ?? 0;
     final expenses =
-        (data['food'] ?? 0) + (data['clothes'] ?? 0) + (data['subs'] ?? 0);
+        (data['food'] ?? 0) +
+        (data['clothes'] ?? 0) +
+        (data['subs'] ?? 0) +
+        (data['dailyTrackedExpenses'] ?? 0);
     final bills =
         (data['water'] ?? 0) +
         (data['electricity'] ?? 0) +
@@ -269,6 +303,10 @@ class _HomePageState extends State<HomePage> {
                       _infoRow("Food", "\$${userData['food']}"),
                       _infoRow("Clothes", "\$${userData['clothes']}"),
                       _infoRow("Subscriptions", "\$${userData['subs']}"),
+                      _infoRow(
+                        "Daily Tracked Expenses",
+                        "\$${userData['dailyTrackedExpenses']}",
+                      ),
                       _infoRow("Other", userData['otherExpense']),
                     ]),
                     _buildSection("Monthly Bills", [

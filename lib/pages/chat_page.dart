@@ -67,6 +67,7 @@ class _ChatPageState extends State<ChatPage> {
       'Food': prefs.getInt('food') ?? 0,
       'Clothes': prefs.getInt('clothes') ?? 0,
       'Subscriptions': prefs.getInt('subs') ?? 0,
+      'Daily Expenses': prefs.getString('dailyTrackedExpenses') ?? '',
       'Other Expenses': prefs.getString('otherExpense') ?? '',
       'Water Bill': prefs.getInt('water') ?? 0,
       'Electricity': prefs.getInt('electricity') ?? 0,
@@ -172,7 +173,10 @@ class _ChatPageState extends State<ChatPage> {
         margin: EdgeInsets.symmetric(vertical: 4),
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isUser ? Colors.blue.shade100 : Colors.grey.shade200,
+          color:
+              isUser
+                  ? const Color.fromARGB(255, 68, 126, 173)
+                  : const Color.fromARGB(255, 103, 80, 195),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(text),

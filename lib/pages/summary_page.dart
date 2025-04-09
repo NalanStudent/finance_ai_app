@@ -41,6 +41,7 @@ class _SummaryPageState extends State<SummaryPage> {
       'Food': prefs.getInt('food') ?? 0,
       'Clothes': prefs.getInt('clothes') ?? 0,
       'Subscriptions': prefs.getInt('subs') ?? 0,
+      'Daily Expenses': prefs.getString('dailyTrackedExpenses') ?? '',
       'Other Expenses': prefs.getString('otherExpense') ?? '',
       'Water Bill': prefs.getInt('water') ?? 0,
       'Electricity': prefs.getInt('electricity') ?? 0,

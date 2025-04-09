@@ -15,7 +15,37 @@ class FinanceAIApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Finance AI',
-      theme: ThemeData(primarySwatch: Colors.teal),
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        primaryColor: Colors.blue,
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.blueAccent,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Colors.white70),
+        ),
+        cardColor: Colors.grey[900],
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.black,
+          selectedItemColor: Colors.blueAccent,
+          unselectedItemColor: Colors.grey,
+        ),
+      ),
       home: MainNavigation(),
     );
   }
@@ -43,7 +73,7 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed, // allows more than 3 items
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.insights), label: 'Summary'),
@@ -51,7 +81,7 @@ class _MainNavigationState extends State<MainNavigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.list_alt),
             label: 'Expenses',
-          ), // <-- NEW ITEM
+          ),
         ],
       ),
     );
