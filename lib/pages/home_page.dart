@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'form_page.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -57,6 +58,11 @@ class _HomePageState extends State<HomePage> {
       };
       savings = calculatedSavings;
     });
+  }
+
+  String _getCurrentDateTime() {
+    final now = DateTime.now();
+    return DateFormat('EEE, d MMM yyyy hh:mm a').format(now);
   }
 
   Widget _buildSection(String title, List<Widget> children) {
@@ -208,6 +214,19 @@ class _HomePageState extends State<HomePage> {
                 ? Center(child: CircularProgressIndicator())
                 : Column(
                   children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Text(
+                          "Today: ${_getCurrentDateTime()}",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
                     Text(
                       "Budget Breakdown",
                       style: TextStyle(

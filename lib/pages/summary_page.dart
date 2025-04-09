@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
 
 class SummaryPage extends StatefulWidget {
   @override
@@ -13,9 +15,19 @@ class SummaryPage extends StatefulWidget {
 class _SummaryPageState extends State<SummaryPage> {
   String summary = '';
   bool isLoading = false;
+  String currentDate = '';
+
+  String _getCurrentDateTime() {
+    final now = DateTime.now();
+    return DateFormat('EEE, d MMM yyyy hh:mm a').format(now);
+  }
 
   Future<void> generateSummary() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      currentDate = _getCurrentDateTime();
+    });
+
     final prefs = await SharedPreferences.getInstance();
 
     final userData = {
@@ -54,7 +66,6 @@ Follow the structure below only for output without additional starting or ending
 
 Name: [Name]
 Age: [Age]
-Date: [DATE MONTH YEAR] (Please use the current date from internet)
 
 Financial Health Summary:
 [Summary in small brief paragraph]
@@ -121,6 +132,14 @@ Money Management Tip:
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    currentDate,
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColor.fromInt(0xFF666666),
+                    ),
+                  ),
                   pw.SizedBox(height: 16),
                   pw.Text(summaryText, style: pw.TextStyle(fontSize: 14)),
                 ],
@@ -154,6 +173,12 @@ Money Management Tip:
                       "Your AI-Powered Financial Summary",
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
+                    SizedBox(height: 8),
+                    if (currentDate.isNotEmpty)
+                      Text(
+                        "Generated on: $currentDate",
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
                     SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(

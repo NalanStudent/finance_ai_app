@@ -16,7 +16,24 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    _sendGreetingMessage(); // Send the initial greeting message on page load
+    _loadMessages();
+  }
+
+  Future<void> _loadMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final messageList = prefs.getStringList('chat_messages');
+
+    if (messageList != null && messageList.isNotEmpty) {
+      final restored =
+          messageList
+              .map((msg) => Map<String, String>.from(jsonDecode(msg)))
+              .toList();
+      setState(() {
+        _messages.addAll(restored);
+      });
+    } else {
+      _sendGreetingMessage(); // First-time or after reset
+    }
   }
 
   // Send initial greeting message
@@ -24,10 +41,16 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       _messages.add({
         'role': 'assistant',
-        'text':
-            'Hello! How can I assist you with your financial queries today?',
+        'text': 'Hello! How can I assist you with your financial queries?',
       });
     });
+    _saveMessages();
+  }
+
+  Future<void> _saveMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final messageList = _messages.map((msg) => jsonEncode(msg)).toList();
+    await prefs.setStringList('chat_messages', messageList);
   }
 
   Future<String> _generatePrompt(String userMessage) async {
@@ -53,18 +76,29 @@ class _ChatPageState extends State<ChatPage> {
     };
 
     return """
-You are a helpful, friendly, and professional AI assistant specializing in personal finance. Your role is to assist the user with various financial queries such as budgeting, savings, debt management, investment advice, expenses tracking, and other related topics. You should provide clear, concise, and accurate information to help the user make informed financial decisions.
+      You are a helpful, friendly, and professional AI assistant specializing in personal finance. Your role is to assist the user with various financial queries such as budgeting, savings, debt management, investment advice, expenses tracking, and other related topics. You should provide clear, concise, and accurate information to help the user make informed financial decisions.
 
-You should only respond to questions related to finance. If the user asks anything outside of the realm of finance, politely inform them that you are unable to assist with those topics. You may say something like: "Sorry, I can only respond to finance-related queries."
+      You should only respond to questions related to finance. If the user asks anything outside of the realm of finance, politely inform them that you are unable to assist with those topics. You may say something like: "Sorry, I can only respond to finance-related queries."
 
-Always maintain a professional tone, be empathetic to the user’s financial concerns, and offer advice that aligns with sound financial principles. Do not engage in any discussions that are not directly related to personal finance.
+      Always maintain a professional tone, be empathetic to the user’s financial concerns, and offer advice that aligns with sound financial principles. Do not engage in any discussions that are not directly related to personal finance.
 
-Here is the user's financial context:
-${jsonEncode(userData)}
+      Make sure, if the output has to be detailed, do not make it very long. Make it a few consice paragraph in that case.
 
-Now, respond to this message from the user:
-"$userMessage"
-""";
+      Do not include any special formatting to the output. 
+      Even if it is asked by user to do formatting like bold italic underline or so in the prompt hereafter, do not include although contradicting. Just follow the rule not to format.
+      Just plain text with spaces and new lines should be included.
+
+      Use of emoji is allowed but do not overuse it. Emojis can be used instead of formatting, for example instead of bullet points formatting, emojis suitable can be used
+      For specific bulltet points, use emojis like arrow, checkmark, etc.
+      
+      
+      Here is the user's financial context:
+      ${jsonEncode(userData)}
+
+
+      Now, respond to this message from the user:
+      "$userMessage"
+      """;
   }
 
   Future<void> _sendMessage() async {
@@ -76,6 +110,7 @@ Now, respond to this message from the user:
       _isSending = true;
       _controller.clear();
     });
+    _saveMessages();
 
     final prompt = await _generatePrompt(message);
 
@@ -104,6 +139,7 @@ Now, respond to this message from the user:
         _messages.add({'role': 'assistant', 'text': cleanedReply});
         _isSending = false;
       });
+      _saveMessages();
     } catch (e) {
       setState(() {
         _messages.add({
@@ -111,15 +147,21 @@ Now, respond to this message from the user:
           'text': 'Something went wrong: $e',
         });
         _isSending = false;
+        _saveMessages();
       });
     }
   }
 
   // Clear chat history
-  void _clearChat() {
+  void _clearChat() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('chat_messages'); // Clear from storage too
+
     setState(() {
-      _messages.clear(); // Clears the chat history
+      _messages.clear();
     });
+
+    _sendGreetingMessage();
   }
 
   Widget _buildMessage(String role, String text) {
